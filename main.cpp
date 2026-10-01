@@ -1,3 +1,4 @@
+// меня не было на практике, поэтому я писал сам и по-своему)
 #include <iostream>
 
 int ** convert(const int *t, size_t n, const size_t *lns, size_t rows)

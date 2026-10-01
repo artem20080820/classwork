@@ -13,7 +13,7 @@ int ** convert(const int *t, size_t n, const size_t *lns, size_t rows)
     {
         for (size_t j = 0; j < lns[i]; ++j)
         {
-            arr[rows][j] = *pa;
+            arr[i][j] = *pa;
             ++pa;
         }
     }
@@ -35,7 +35,7 @@ int main()
     {   
         for (size_t j = 0; j < lns[i]; ++j)
         {
-            std::cout << arr[rows][j] << '\t';
+            std::cout << arr[i][j] << '\t';
         }
         std::cout << '\n' << '\n';
 

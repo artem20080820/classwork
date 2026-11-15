@@ -444,3 +444,268 @@ int main() {
 
   return 0;
 }
+
+class Mtxs {
+public:
+  Mtxs();
+  Mtxs(size_t k);
+  Mtxs(const Mtx * arr, size_t k);
+
+  Mtxs(Mtxs const &other);
+  Mtxs(Mtxs &&other) noexcept;
+
+  Mtxs & operator=(const Mtxs &other);
+  Mtxs & operator=(Mtxs &&other) noexcept;
+  const Mtx & operator[](size_t id) const;
+  Mtx & operator[](size_t id);
+  Mtxs operator+(const Mtxs &other) const;
+  Mtxs operator|(const Mtxs &other) const;
+
+  void erase(size_t id);
+  void erase(size_t st, size_t end);
+  void erase(size_t size, size_t *indexs);
+
+  void insert(size_t id, const Mtx &m);
+  void insert(size_t id, const Mtxs &other);
+  void insert(size_t id, const Mtx *arr, size_t size);
+
+  Mtx conv(Mtx m, Mtx (*f)(Mtx, Mtx)) const;
+  size_t getSize() const noexcept;
+
+  ~Mtxs();
+
+private:
+  size_t k;
+  Mtx * mtxs;
+};
+
+Mtxs::Mtxs():
+  k(0),
+  mtxs(nullptr)
+{}
+
+Mtxs::Mtxs(size_t k):
+  k(k),
+  mtxs(new Mtx[k]{})
+{}
+
+Mtxs::Mtxs(const Mtx * arr, size_t k):
+  k(k),
+  mtxs(new Mtx[k])
+{
+  for (size_t i = 0; i < k; ++i)\
+  {
+    mtxs[i] = arr[i];
+  }
+}
+
+Mtxs::Mtxs(Mtxs const &other):
+  k(other.k),
+  mtxs(new Mtx[k])
+{
+  for (size_t i = 0; i < k; ++i)
+  {
+    mtxs[i] = other.mtxs[i];
+  }
+}
+
+Mtxs::Mtxs(Mtxs &&other) noexcept:
+  k(other.k),
+  mtxs(other.mtxs)
+{
+  other.k = 0;
+  other.mtxs = nullptr;
+}
+
+Mtxs & Mtxs::operator=(const Mtxs &other)
+{
+  if (this == &other)
+  {
+    return *this;
+  }
+
+  Mtxs temp(other);
+  std::swap(k, temp.k);
+  std::swap(mtxs, temp.mtxs);
+
+  return *this;
+}
+
+Mtxs & Mtxs::operator=(Mtxs &&other) noexcept
+{
+  std::swap(k, other.k);
+  std::swap(mtxs, other.mtxs);
+  
+  return *this;
+}
+
+const Mtx & Mtxs::operator[](size_t id) const
+{
+  return mtxs[id];
+}
+
+Mtx & Mtxs::operator[](size_t id)
+{
+  return mtxs[id];
+}
+
+Mtxs Mtxs::operator+(const Mtxs &other) const
+{
+  Mtxs res(*this);
+  res.insert(k, other);
+
+  return res;
+}
+
+Mtxs Mtxs::operator|(const Mtxs &other) const
+{
+  if (k != other.k)
+  {
+    throw std::invalid_argument("Different sizes");
+  }
+
+  Mtxs res(k);
+  for (size_t i = 0; i < k; ++i)
+  {
+    res.mtxs[i] = mtxs[i].sum(other.mtxs[i]);
+  }
+
+  return res;
+}
+
+void Mtxs::erase(size_t id)
+{
+  if (id >= k)
+  {
+    throw std::out_of_range("Out of range");
+  }
+
+  Mtxs temp(k - 1);
+  size_t count = 0;
+  for (size_t i = 0; i < k; ++i)
+  {
+    if (i != id)
+    {
+      temp.mtxs[count] = mtxs[i];
+      ++count;
+    }
+  }
+
+  std::swap(k, temp.k);
+  std::swap(mtxs, temp.mtxs);
+}
+
+void Mtxs::erase(size_t st, size_t end)
+{
+  if (st > end || end > k)
+  {
+    throw std::invalid_argument("Invalid range");
+  }
+
+  Mtxs temp(k - (end - st));
+  size_t count = 0;
+  for (size_t i = 0; i < k; ++i)
+  {
+    if (i < st || i >= end)
+    {
+      temp[count] = mtxs[i];
+      ++count;
+    }
+  }
+
+  std::swap(k, temp.k);
+  std::swap(mtxs, temp.mtxs);
+}
+
+void Mtxs::erase(size_t size, size_t *indexs)
+{ 
+  int flag = 0;
+  size_t count = 0;
+  Mtxs temp(k - size);
+  for (size_t i = 0; i < k; ++i)
+  {
+    flag = 0;
+    for (size_t j = 0; j < size; ++j)
+    {
+      if (i == indexs[j])
+      {
+        flag = 1;
+        break;
+      }
+    }
+
+    if (flag == 0)
+    {
+      temp[count] = mtxs[i];
+      ++count;
+    }
+  }
+
+  std::swap(k, temp.k);
+  std::swap(mtxs, temp.mtxs);
+}
+
+void Mtxs::insert(size_t id, const Mtx &m)
+{
+  insert(id, &m, 1);
+}
+
+void Mtxs::insert(size_t id, const Mtxs &other)
+{
+  insert(id, other.mtxs, other.k);
+}
+
+void Mtxs::insert(size_t id, const Mtx *arr, size_t size)
+{
+  if (id > k)
+  {
+    throw std::out_of_range("Out of range");
+  }
+  if (size > std::numeric_limits< size_t >::max() - k)
+  {
+    throw std::overflow_error("Overflow");
+  }
+
+  Mtxs temp(k + size);
+  for (size_t i = 0; i < id; ++i)
+  {
+    temp.mtxs[i] = mtxs[i];
+  }
+  for (size_t i = 0; i < size; ++i)
+  {
+    temp.mtxs[id + i] = arr[i];
+  }
+  for (size_t i = id; i < k; ++i)
+  {
+    temp.mtxs[size + i] = mtxs[i];
+  }
+
+  std::swap(k, temp.k);
+  std::swap(mtxs, temp.mtxs);
+}
+
+Mtx Mtxs::conv(Mtx m, Mtx (*f)(Mtx, Mtx)) const
+{
+  if (f == nullptr)
+  {
+    throw std::invalid_argument("Null function");
+  }
+
+  for (size_t i = 0; i < k; ++i)
+  {
+    m = f(m, mtxs[i]);
+  }
+
+  return m;
+}
+
+size_t Mtxs::getSize() const noexcept
+{
+  return k;
+}
+
+Mtxs::~Mtxs() 
+{
+  delete [] mtxs;
+}
+

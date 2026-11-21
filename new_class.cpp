@@ -1,8 +1,21 @@
 #include <iostream>
 
-namespace
+const size_t planarSize = 5;
+const int planarTypes[planarSize] = {1, 2, 3, 5, 6};
+
+namespace arch
 {
   enum Color {RED, GREEN, BLUE};
+  Color makeColor(char c)
+  {
+    switch (c)
+    {
+    case 'r': return Color::RED;
+    case 'g': return Color::GREEN;
+    case 'b': return Color::BLUE;
+    default: throw std::logic_error("Incorrect color");
+    }
+  }
   class Planar;
   class Colored;
   class Point;
@@ -61,6 +74,15 @@ namespace
   private:
     int x_, y_;
   };
+  Planar* clonePoint(std::istream& in)
+  {
+    int x = 0, y = 0;
+    if (in >> x >> y)
+    {
+      return new Point(x, y);
+    }
+    throw std::logic_error("Incorrect point");
+  }
 
   class Circle: public Planar
   {
@@ -109,6 +131,16 @@ namespace
     Point c_;
     int r_;
   };
+
+  Planar* cloneCircle(std::istream& in)
+  {
+    int x1 = 0, y1 = 0 , r = 0;
+    if (in >> x1 >> y1 >> r)
+    {
+      return new Circle(Point(x1, y1), r);
+    }
+    throw std::logic_error("Incorrect circle");
+  }
 
   class ColoredCircle: public Planar, public Colored
   {
@@ -168,6 +200,25 @@ namespace
     Color cl_;
   };
 
+  ColoredCircle* cloneColoredCircle(std::istream& in)
+  {
+    int x = 0, y = 0, r = 0;
+    char color = 0;
+    if (in >> x >> y >> r >> color)
+    {
+      return new ColoredCircle(Circle(Point(x, y), r), makeColor(color));
+    }
+    throw std::logic_error("Incorrect colored circle");
+  }
+  Planar* cloneColoredCirclePlanar(std::istream& in)
+  {
+    return cloneColoredCircle(in);
+  }
+  Colored* cloneColoredCircleColored(std::istream& in)
+  {
+    return cloneColoredCircle(in);
+  }
+
   class Vector: public Planar
   {
   public:
@@ -197,6 +248,15 @@ namespace
   private:
     Point a_, b_;
   };
+  Planar* cloneVector(std::istream& in)
+  {
+    int x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+    if (in >> x1 >> y1 >> x2 >> y2)
+    {
+      return new Vector(Point(x1, y1), Point(x2, y2));
+    }
+    throw std::logic_error("Incorrect vector");
+  }
 
   class ColoredPoint: public Planar, public Colored
   {
@@ -236,6 +296,24 @@ namespace
     Point p_;
     Color cl_;
   };
+  ColoredPoint* cloneColoredPoint(std::istream& in)
+  {
+    int x = 0, y = 0;
+    char color = 0;
+    if (in >> x >> y >> color)
+    {
+      return new ColoredPoint(Point(x, y), makeColor(color));
+    }
+    throw std::logic_error("Incorrect colored point");
+  }
+  Planar* cloneColoredPointPlanar(std::istream& in)
+  {
+    return cloneColoredPoint(in);
+  }
+  Colored* cloneColoredPointColored(std::istream& in)
+  {
+    return cloneColoredPoint(in);
+  }
 
   class Brush: public Colored
   {
@@ -256,48 +334,256 @@ namespace
   private:
     Color cl_;
   };
+  Colored* cloneBrush(std::istream& in)
+  {
+    char color = 0;
+    if (in >> color)
+    {
+      return new Brush(makeColor(color));
+    }
+    throw std::logic_error("Incorrect brush");
+  }
+
+  Planar* fabricPlanar(std::istream& in)
+  {
+    int num = 0;
+    in >> num;
+    switch (num)
+    {
+    case 1: return clonePoint(in);
+    case 2: return cloneVector(in);
+    case 3: return cloneColoredPointPlanar(in);
+    case 5: return cloneCircle(in);
+    case 6: return cloneColoredCirclePlanar(in);
+    default: throw std::logic_error("Incorrect planar");
+    }
+  }
+
+  Colored* fabricColored(std::istream& in)
+  {
+    int num = 0;
+    in >> num;
+    switch (num)
+    {
+    case 3: return cloneColoredPointColored(in);
+    case 4: return cloneBrush(in);
+    case 6: return cloneColoredCircleColored(in);
+    default: throw std::logic_error("Incorrect colored");
+    }
+  }
 }
 
+namespace fabric
+{
+  class AbstractFabricPlanar
+  {
+  public:
+    virtual ~AbstractFabricPlanar() = default;
 
-std::ostream& print_abs_sqr(std::ostream& out, Planar* pl)
+    virtual arch::Planar* create(std::istream& in) = 0;
+  };
+
+  class FabricPoint: public AbstractFabricPlanar
+  {
+  public:
+    virtual ~FabricPoint() = default;
+    virtual arch::Planar* create(std::istream& in) override
+    {
+      int x = 0, y = 0;
+      if (in >> x >> y)
+      {
+        return new arch::Point(x, y);
+      }
+      throw std::logic_error("Incorrect point");
+    }
+  };
+
+  class FabricVector: public AbstractFabricPlanar
+  {
+  public:
+    virtual ~FabricVector() = default;
+    virtual arch::Planar* create(std::istream& in) override
+    {
+      int x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+      if (in >> x1 >> y1 >> x2 >> y2)
+      {
+        return new arch::Vector(arch::Point(x1, y1), arch::Point(x2, y2));
+      }
+      throw std::logic_error("Incorrect vector");
+    }
+  };
+
+  class FabricColoredPoint: public AbstractFabricPlanar
+  {
+  public:
+    virtual ~FabricColoredPoint() = default;
+    virtual arch::Planar* create(std::istream& in) override
+    {
+      int x = 0, y = 0;
+      char color = 0;
+      if (in >> x >> y >> color)
+      {
+        return new arch::ColoredPoint(arch::Point(x, y), arch::makeColor(color));
+      }
+      throw std::logic_error("Incorrect colored point");
+    }
+  };
+
+  class FabricCircle: public AbstractFabricPlanar
+  {
+  public:
+    virtual ~FabricCircle() = default;
+    virtual arch::Planar* create(std::istream& in) override
+    {
+      int x1 = 0, y1 = 0, r = 0;
+      if (in >> x1 >> y1 >> r)
+      {
+        return new arch::Circle(arch::Point(x1, y1), r);
+      }
+      throw std::logic_error("Incorrect circle");
+    }
+  };
+
+  class FabricColoredCircle: public AbstractFabricPlanar
+  {
+  public:
+    virtual ~FabricColoredCircle() = default;
+    virtual arch::Planar* create(std::istream& in) override
+    {
+      int x = 0, y = 0, r = 0;
+      char color = 0;
+      if (in >> x >> y >> r >> color)
+      {
+        return new arch::ColoredCircle(arch::Circle(arch::Point(x, y), r), arch::makeColor(color));
+      }
+      throw std::logic_error("Incorrect colored circle");
+    }
+  };
+
+  void clearFabricsPlanar(AbstractFabricPlanar** fabricsPlanar, size_t size)
+  {
+    for (size_t j = 0; j < size; j++)
+    {
+      delete fabricsPlanar[j];
+    }
+    delete[] fabricsPlanar;
+  }
+
+  AbstractFabricPlanar** makeFabricsPlanar()
+  {
+    AbstractFabricPlanar** fabricsPlanar = new AbstractFabricPlanar*[planarSize];
+    size_t i = 0;
+    try
+    {
+      fabricsPlanar[i] = new FabricPoint();
+      i++;
+      fabricsPlanar[i] = new FabricVector();
+      i++;
+      fabricsPlanar[i] = new FabricColoredPoint();
+      i++;
+      fabricsPlanar[i] = new FabricCircle();
+      i++;
+      fabricsPlanar[i] = new FabricColoredCircle();
+      i++;
+    }
+    catch (const std::exception& e)
+    {
+      clearFabricsPlanar(fabricsPlanar, i);
+      throw;
+    }
+    return fabricsPlanar;
+  }
+}
+
+std::ostream& printAbsSqr(std::ostream& out, arch::Planar* pl)
 {
   return pl->info(out) << ' ' << pl->abs_sqr();
 }
 
-void del(Planar* pls[], size_t size)
+void clear(arch::Planar* pls[], size_t size)
 {
   for (size_t i = 0; i < size; i++)
   {
     delete pls[i];
   }
+  delete[] pls;
 }
 
 int main()
 {
-  const size_t cap = 8;
-  Planar* pls[cap];
-  size_t size = 0;
+  size_t cap = 0;
+  fabric::AbstractFabricPlanar** fabrics = nullptr;
   try
   {
-    pls[size++] = new Point(1, 2);
-    pls[size++] = new Point(3, 4);
-    pls[size++] = new Vector(Point(1, 2), Point(3, 4));
-    pls[size++] = new Vector(Point(3, 4), Point(1, 2));
-    pls[size++] = new ColoredPoint(Point(1, 2), Color::RED);
-    pls[size++] = new ColoredPoint(Point(3, 4), Color::GREEN);
-    pls[size++] = new Circle(Point(1, 2), 3);
-    pls[size++] = new ColoredCircle(Circle(Point(3, 4), 5), Color::BLUE);
+    fabrics = fabric::makeFabricsPlanar();
   }
   catch (const std::exception& e)
   {
-    del(pls, size);
     std::cerr << e.what() << '\n';
+    return 1;
+  }
+  std::cin >> cap;
+  if (!std::cin)
+  {
+    fabric::clearFabricsPlanar(fabrics, planarSize);
+    std::cerr << "Incorrect size\n";
+    return 1;
+  }
+
+  arch::Planar** pls = nullptr;
+  try
+  {
+    pls = new arch::Planar*[cap];
+  }
+  catch (const std::exception& e)
+  {
+    fabric::clearFabricsPlanar(fabrics, planarSize);
+    std::cerr << e.what() << '\n';
+    return 1;
+  }
+  
+  size_t size = 0;
+  while (size < cap && std::cin)
+  {
+    int num = 0;
+    std::cin >> num;
+    try
+    {
+      for (size_t j = 0; j < planarSize; j++)
+      {
+        if (num == planarTypes[j])
+        {
+          pls[size] = fabrics[j]->create(std::cin);
+          size++;
+        }
+      }
+    }
+    catch (const std::exception& e)
+    {
+      fabric::clearFabricsPlanar(fabrics, planarSize);
+      clear(pls, size);
+      std::cerr << e.what() << '\n';
+      return 1;
+    }
   }
 
   for (size_t i = 0; i < size; i++)
   {
-    print_abs_sqr(std::cout, pls[i]) << '\n';
+    printAbsSqr(std::cout, pls[i]) << '\n';
   }
 
-  del(pls, size);
+  fabric::clearFabricsPlanar(fabrics, planarSize);
+  clear(pls, size);
 }
+
+// 1 - Point [x, y]
+// 2 - Vector [x1, y1, x2, y2]
+// 3 - ColoredPoint [x, y, color]
+// 4 - Brush [color]
+// 5 - Circle [x, y, r]
+// 6 - ColoredCircle [x, y, r, color]
+
+// 0. count
+// 1. [num] [args]
+// ...
+// count.
